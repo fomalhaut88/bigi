@@ -203,6 +203,7 @@ pub fn sqrt_mod(n: &Bigi, p: &Bigi) -> Result<(Bigi, Bigi), &'static str> {
     let mut c = z.powmod(&q, &p);
     let mut r = n.powmod(&((q + &bigi![1]) >> 1), &p);
     let mut t = n.powmod(&q, &p);
+    let mut m = s;
 
     // Tonelli–Shanks's loop
     while t != bigi![1] {
@@ -215,10 +216,11 @@ pub fn sqrt_mod(n: &Bigi, p: &Bigi) -> Result<(Bigi, Bigi), &'static str> {
             }
             i
         };
-        let b = c.powmod(&(bigi![1] << (s - i - 1)), &p);
+        let b = c.powmod(&(bigi![1] << (m - i - 1)), &p);
         r = mul_mod(&r, &b, &p);
         c = mul_mod(&b, &b, &p);
         t = mul_mod(&t, &c, &p);
+        m = i;
     }
 
     // Second root
@@ -268,5 +270,6 @@ mod tests {
         assert_eq!(sqrt_mod(&bigi![10], &bigi![13]), Ok((bigi![6], bigi![7])));
         assert_eq!(sqrt_mod(&bigi![5], &bigi![29]), Ok((bigi![11], bigi![18])));
         assert_eq!(sqrt_mod(&bigi![8], &bigi![29]), Err("Non-quadratic residue"));
+        assert_eq!(sqrt_mod(&bigi![75], &bigi![97]), Ok((bigi![47], bigi![50])));
     }
 }
