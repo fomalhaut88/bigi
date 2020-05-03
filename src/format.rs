@@ -1,5 +1,6 @@
-use std::{fmt, mem};
-use crate::{bigi, base::{Bigi, BigiType, BIGI_MAX_DIGITS, BIGI_BYTES}};
+use std::{fmt, mem, cmp};
+use crate::{bigi};
+use crate::base::{Bigi, BigiType, BIGI_MAX_DIGITS, BIGI_BYTES, BIGI_TYPE_BYTES};
 
 
 impl Bigi {
@@ -85,10 +86,18 @@ impl Bigi {
     pub fn from_bytes(bytes: &[u8]) -> Bigi {
         let mut res = bigi![0];
 
-        // TODO: perhaps, there's a way to copy without the additional buffer
-        let mut buffer: [u8; BIGI_BYTES] = [0; BIGI_BYTES];
-        buffer.copy_from_slice(bytes);
-        res.digits = unsafe { mem::transmute(buffer) };
+        for i in 0..BIGI_MAX_DIGITS {
+            let start = BIGI_TYPE_BYTES * i;
+            let end = cmp::min(start + BIGI_TYPE_BYTES, bytes.len());
+
+            if start >= bytes.len() {
+                break;
+            }
+
+            let mut buffer: [u8; BIGI_TYPE_BYTES] = [0; BIGI_TYPE_BYTES];
+            buffer[..(end - start)].clone_from_slice(&bytes[start..end]);
+            res.digits[i] = unsafe { mem::transmute(buffer) };
+        }
 
         res.update_order();
         res
@@ -155,8 +164,10 @@ mod tests {
 
     #[test]
     fn test_from_bytes() {
-        assert_eq!(Bigi::from_bytes(&vec![25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), bigi![25]);
-        assert_eq!(Bigi::from_bytes(&vec![25, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), bigi![25, 11]);
-        assert_eq!(Bigi::from_bytes(&vec![232, 3, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), bigi![1000, 11]);
+        assert_eq!(Bigi::from_bytes(&vec![25]), bigi![25]);
+        assert_eq!(Bigi::from_bytes(&vec![25, 0, 0, 0, 11]), bigi![25, 11]);
+        assert_eq!(Bigi::from_bytes(&vec![232, 3, 0, 0, 11]), bigi![1000, 11]);
+        assert_eq!(Bigi::from_bytes(&vec![232, 3, 123, 250, 11]), bigi![4202365928, 11]);
+        assert_eq!(Bigi::from_bytes(&vec![232, 3, 123, 250]), bigi![4202365928]);
     }
 }
