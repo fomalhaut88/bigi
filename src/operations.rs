@@ -3,12 +3,33 @@ use crate::{bigi, base::{Bigi, BigiType, Bigi2Type, BIGI_MAX_DIGITS, BIGI_TYPE_B
 
 
 impl Bigi {
+    pub fn is_zero(&self) -> bool {
+        self.order == 0
+    }
+
     pub fn is_odd(&self) -> bool {
         self.digits[0] % 2 == 1
     }
 
     pub fn is_even(&self) -> bool {
         self.digits[0] % 2 == 0
+    }
+
+    pub fn bit_length(&self) -> usize {
+        if self.order != 0 {
+            let l = {
+                let mut l = 0;
+                let mut digit = self.digits[self.order - 1];
+                while digit != 0 {
+                    digit >>= 1;
+                    l += 1;
+                }
+                l
+            };
+            l + BIGI_TYPE_BITS * (self.order - 1)
+        } else {
+            0
+        }
     }
 
     pub fn get_bit(&self, bit: usize) -> bool {
@@ -335,60 +356,83 @@ mod tests {
     use super::*;
 
     #[test]
-    fn add() {
+    fn test_add() {
         assert_eq!(bigi![2] + &bigi![3], bigi![5]);
         assert_eq!(bigi![3567587328, 232, 0, 29] + &bigi![12312344, 1, 1234098120, 21556, 134236576], bigi![3579899672, 233, 1234098120, 21585, 134236576]);
     }
 
     #[test]
-    fn sub() {
+    fn test_sub() {
         assert_eq!(bigi![5] - &bigi![2], bigi![3]);
         assert_eq!(bigi![12312344, 1, 1234098120, 21556, 134236576] - &bigi![3567587328, 232, 0, 29], bigi![739692312, 4294967064, 1234098119, 21527, 134236576]);
     }
 
     #[test]
-    fn mul() {
+    fn test_mul() {
         assert_eq!(bigi![5] * &bigi![2], bigi![10]);
         assert_eq!(bigi![12312344, 1, 1234098120, 21556, 134236576] * &bigi![3567587328, 232, 0, 29], bigi![1751744512, 2139311010, 2707718377, 1453116243, 4177958257, 2618724431, 625139, 3892860704]);
     }
 
     #[test]
-    fn div() {
+    fn test_div() {
         assert_eq!(bigi![5] / &bigi![2], bigi![2]);
         assert_eq!(bigi![12312344, 1, 1234098120, 21556, 134236576] / &bigi![3567587328, 232, 0, 29], bigi![1925330910, 4628847]);
     }
 
     #[test]
-    fn rem() {
+    fn test_rem() {
         assert_eq!(bigi![5] % &bigi![2], bigi![1]);
         assert_eq!(bigi![12312344, 1, 1234098120, 21556, 134236576] % &bigi![3567587328, 232, 0, 29], bigi![52952856, 1040751155, 156360589, 14]);
     }
 
     #[test]
-    fn shl() {
+    fn test_shl() {
         assert_eq!(bigi![100] << 2, bigi![400]);
         assert_eq!(bigi![100, 1] << 40, bigi![0, 25600, 256]);
         assert_eq!(bigi![3567587328, 232, 0, 29] << 96, bigi![0, 0, 0, 3567587328, 232, 0, 29]);
     }
 
     #[test]
-    fn shr() {
+    fn test_shr() {
         assert_eq!(bigi![400] >> 2, bigi![100]);
         assert_eq!(bigi![0, 25600, 256] >> 40, bigi![100, 1]);
         assert_eq!(bigi![1751744512, 2139311010, 2707718377, 1453116243, 4177958257, 2618724431, 625139, 3892860704] >> 128, bigi![4177958257, 2618724431, 625139, 3892860704]);
     }
 
     #[test]
-    fn is_odd() {
+    fn test_is_odd() {
         assert_eq!(bigi![5, 26].is_odd(), true);
         assert_eq!(bigi![0, 26].is_odd(), false);
         assert_eq!(bigi![0].is_odd(), false);
     }
 
     #[test]
-    fn is_even() {
+    fn test_is_even() {
         assert_eq!(bigi![5, 26].is_even(), false);
         assert_eq!(bigi![0, 26].is_even(), true);
         assert_eq!(bigi![0].is_even(), true);
+    }
+
+    #[test]
+    fn test_bit_length() {
+        assert_eq!(bigi![29].bit_length(), 5);
+        assert_eq!(bigi![8].bit_length(), 4);
+        assert_eq!(bigi![0].bit_length(), 0);
+        assert_eq!(bigi![0, 0, 29].bit_length(), 69);
+        assert_eq!(bigi![0, 0, 8].bit_length(), 68);
+        assert_eq!(bigi![0, 0, 0, 1].bit_length(), 97);
+        assert_eq!(bigi![0, 0, 0, 2].bit_length(), 98);
+        assert_eq!(bigi![0, 0, 0, 4294967295].bit_length(), 128);
+    }
+
+    #[test]
+    fn test_is_zero() {
+        assert_eq!(bigi![0].is_zero(), true);
+        assert_eq!(bigi![1].is_zero(), false);
+        assert_eq!(bigi![5].is_zero(), false);
+        assert_eq!(bigi![0, 0].is_zero(), true);
+        assert_eq!(bigi![0, 1].is_zero(), false);
+        assert_eq!(bigi![0, 10].is_zero(), false);
+        assert_eq!(bigi![5, 10].is_zero(), false);
     }
 }

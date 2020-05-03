@@ -22,8 +22,9 @@ pub fn quick_prime_check(x: &Bigi) -> bool {
                                 509, 521, 523, 541];
 
     for p in primes.iter() {
-        if *x % &bigi![*p] == bigi![0] {
-            return false;
+        let b = bigi![*p];
+        if (*x % &b).is_zero() {
+            return *x == b;
         }
     }
 
@@ -52,7 +53,7 @@ pub fn miller_rabin(x: &Bigi, k: usize) -> bool {
         let mut a = Bigi::gen_random(&mut rng, bits, false);
         a.divide(&x);
 
-        if a == bigi![0] {
+        if a.is_zero() {
             continue;
         }
 
@@ -271,5 +272,17 @@ mod tests {
         assert_eq!(sqrt_mod(&bigi![5], &bigi![29]), Ok((bigi![11], bigi![18])));
         assert_eq!(sqrt_mod(&bigi![8], &bigi![29]), Err("Non-quadratic residue"));
         assert_eq!(sqrt_mod(&bigi![75], &bigi![97]), Ok((bigi![47], bigi![50])));
+    }
+
+    #[test]
+    fn test_gen_prime() {
+        let mut rng = rand::thread_rng();
+
+        assert_eq!(gen_prime(&mut rng, 128).bit_length(), 128);
+        assert_eq!(gen_prime(&mut rng, 65).bit_length(), 65);
+        assert_eq!(gen_prime(&mut rng, 96).bit_length(), 96);
+        assert_eq!(gen_prime(&mut rng, 33).bit_length(), 33);
+        assert_eq!(gen_prime(&mut rng, 15).bit_length(), 15);
+        assert_eq!(gen_prime(&mut rng, 3).bit_length(), 3);
     }
 }

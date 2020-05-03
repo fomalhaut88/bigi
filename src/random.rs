@@ -34,7 +34,7 @@ impl Bigi {
                 res.digits[quotient] |= 1 << (remainder - 1);
             }
         } else {
-            if strict {
+            if strict && quotient > 0 {
                 res.digits[quotient - 1] |= 1 << (BIGI_TYPE_BITS - 1);
             }
         }
@@ -51,7 +51,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn rand_sample() {
+    fn test_rand_sample() {
         let mut rng = rand::thread_rng();
         let x = rng.gen::<Bigi>();
         assert!(x.digits[0] > 0);
@@ -59,11 +59,16 @@ mod tests {
     }
 
     #[test]
-    fn gen_random() {
+    fn test_gen_random() {
         let mut rng = rand::thread_rng();
-        let x = Bigi::gen_random(&mut rng, 128, true);
-        assert!(x.digits[0] > 0);
-        assert!(x.digits[3] > 0);
-        assert!(x.digits[4] == 0);
+
+        assert_eq!(Bigi::gen_random(&mut rng, 128, true).bit_length(), 128);
+        assert_eq!(Bigi::gen_random(&mut rng, 65, true).bit_length(), 65);
+        assert_eq!(Bigi::gen_random(&mut rng, 96, true).bit_length(), 96);
+        assert_eq!(Bigi::gen_random(&mut rng, 33, true).bit_length(), 33);
+        assert_eq!(Bigi::gen_random(&mut rng, 15, true).bit_length(), 15);
+        assert_eq!(Bigi::gen_random(&mut rng, 3, true).bit_length(), 3);
+        assert_eq!(Bigi::gen_random(&mut rng, 1, true).bit_length(), 1);
+        assert_eq!(Bigi::gen_random(&mut rng, 0, true).bit_length(), 0);
     }
 }

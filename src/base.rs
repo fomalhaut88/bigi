@@ -56,7 +56,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn bigi_macro() {
+    fn test_bigi_macro() {
         let x = bigi![2, 5, 6, 90];
         assert_eq!(x.digits[0], 2);
         assert_eq!(x.digits[1], 5);

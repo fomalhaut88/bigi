@@ -35,23 +35,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn from_bigitype() {
+    fn test_from_bigitype() {
         assert_eq!(Bigi::from(28 as u32), bigi![28]);
     }
 
     #[test]
-    fn from_bigitype2() {
+    fn test_from_bigitype2() {
         assert_eq!(Bigi::from(1000000000000 as u64), bigi![3567587328, 232]);
     }
 
     #[test]
-    fn to_bigitype() {
+    fn test_to_bigitype() {
         assert_eq!(u32::from(bigi![28]), 28);
         assert_eq!(u32::from(bigi![28, 11, 64]), 28);
     }
 
     #[test]
-    fn to_bigitype2() {
+    fn test_to_bigitype2() {
         assert_eq!(u64::from(bigi![3567587328, 232]), 1000000000000);
         assert_eq!(u64::from(bigi![3567587328, 232, 0, 29]), 1000000000000);
     }
