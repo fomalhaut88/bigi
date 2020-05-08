@@ -122,6 +122,7 @@ impl fmt::Debug for Bigi {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test::Bencher;
 
     #[test]
     fn test_to_decimal() {
@@ -169,5 +170,50 @@ mod tests {
         assert_eq!(Bigi::from_bytes(&vec![232, 3, 0, 0, 11]), bigi![1000, 11]);
         assert_eq!(Bigi::from_bytes(&vec![232, 3, 123, 250, 11]), bigi![4202365928, 11]);
         assert_eq!(Bigi::from_bytes(&vec![232, 3, 123, 250]), bigi![4202365928]);
+    }
+
+    #[bench]
+    fn bench_to_decimal_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::gen_random(&mut rng, 256, false);
+        b.iter(|| x.to_decimal());
+    }
+
+    #[bench]
+    fn bench_from_decimal_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::gen_random(&mut rng, 256, false);
+        let y = x.to_decimal();
+        b.iter(|| Bigi::from_decimal(&y));
+    }
+
+    #[bench]
+    fn bench_to_hex_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::gen_random(&mut rng, 256, false);
+        b.iter(|| x.to_hex());
+    }
+
+    #[bench]
+    fn bench_from_hex_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::gen_random(&mut rng, 256, false);
+        let y = x.to_hex();
+        b.iter(|| Bigi::from_hex(&y));
+    }
+
+    #[bench]
+    fn bench_to_bytes_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::gen_random(&mut rng, 256, false);
+        b.iter(|| x.to_bytes());
+    }
+
+    #[bench]
+    fn bench_from_bytes_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::gen_random(&mut rng, 256, false);
+        let y = x.to_bytes();
+        b.iter(|| Bigi::from_bytes(&y));
     }
 }

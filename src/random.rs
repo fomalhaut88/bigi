@@ -49,6 +49,7 @@ impl Bigi {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test::Bencher;
 
     #[test]
     fn test_rand_sample() {
@@ -70,5 +71,11 @@ mod tests {
         assert_eq!(Bigi::gen_random(&mut rng, 3, true).bit_length(), 3);
         assert_eq!(Bigi::gen_random(&mut rng, 1, true).bit_length(), 1);
         assert_eq!(Bigi::gen_random(&mut rng, 0, true).bit_length(), 0);
+    }
+
+    #[bench]
+    fn bench_gen_random_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        b.iter(|| Bigi::gen_random(&mut rng, 256, false));
     }
 }

@@ -2,7 +2,7 @@ extern crate rand;
 
 use std::mem;
 use rand::Rng;
-use crate::{bigi, base::{Bigi, BigiType, BIGI_MAX_DIGITS, BIGI_TYPE_BITS}};
+use crate::{bigi, base::{Bigi, BigiType, BIGI_MAX_DIGITS}};
 
 
 pub fn quick_prime_check(x: &Bigi) -> bool {
@@ -36,7 +36,7 @@ pub fn miller_rabin(x: &Bigi, k: usize) -> bool {
     /*
     Miller–Rabin primality test: https://en.wikipedia.org/wiki/Miller%E2%80%93Rabin_primality_test
     */
-    let bits = x.order * BIGI_TYPE_BITS;
+    let bits = x.bit_length();
     let mut rng = rand::thread_rng();
     let n = *x - &bigi![1];
 
@@ -50,8 +50,7 @@ pub fn miller_rabin(x: &Bigi, k: usize) -> bool {
 
     // Loop
     for _i in 0..k {
-        let mut a = Bigi::gen_random(&mut rng, bits, false);
-        a.divide(&x);
+        let a = Bigi::gen_random(&mut rng, bits, false) % &x;
 
         if a.is_zero() {
             continue;
@@ -160,7 +159,7 @@ pub fn mul_mod(x: &Bigi, y: &Bigi, m: &Bigi) -> Bigi {
 
 
 pub fn inv_mod(x: &Bigi, m: &Bigi) -> Bigi {
-    x.powmod(&(*m - &bigi![2]), &m)
+    euclidean_extended(&x, &m).0
 }
 
 
@@ -242,6 +241,7 @@ pub fn legendre_symbol(a: &Bigi, p: &Bigi) -> BigiType {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test::Bencher;
 
     #[test]
     fn test_miller_rabin() {
@@ -284,5 +284,131 @@ mod tests {
         assert_eq!(gen_prime(&mut rng, 33).bit_length(), 33);
         assert_eq!(gen_prime(&mut rng, 15).bit_length(), 15);
         assert_eq!(gen_prime(&mut rng, 3).bit_length(), 3);
+    }
+
+    #[bench]
+    fn bench_gen_prime_32(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        b.iter(|| gen_prime(&mut rng, 32));
+    }
+
+    #[bench]
+    fn bench_gen_prime_64(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        b.iter(|| gen_prime(&mut rng, 64));
+    }
+
+    #[bench]
+    fn bench_gen_prime_128(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        b.iter(|| gen_prime(&mut rng, 128));
+    }
+
+    #[bench]
+    fn bench_gen_prime_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        b.iter(|| gen_prime(&mut rng, 256));
+    }
+
+    #[bench]
+    fn bench_quick_prime_check_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        b.iter(|| {
+            let x = Bigi::gen_random(&mut rng, 256, false);
+            quick_prime_check(&x);
+        });
+    }
+
+    #[bench]
+    fn bench_miller_rabin_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        b.iter(|| {
+            let x = Bigi::gen_random(&mut rng, 256, false);
+            miller_rabin(&x, 1);
+        });
+    }
+
+    #[bench]
+    fn bench_euclidean_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        b.iter(|| {
+            let x = Bigi::gen_random(&mut rng, 256, false);
+            let y = Bigi::gen_random(&mut rng, 256, false);
+            euclidean(&x, &y);
+        });
+    }
+
+    #[bench]
+    fn bench_euclidean_extended_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        b.iter(|| {
+            let x = Bigi::gen_random(&mut rng, 256, false);
+            let y = Bigi::gen_random(&mut rng, 256, false);
+            euclidean_extended(&x, &y);
+        });
+    }
+
+    #[bench]
+    fn bench_add_mod_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let m = gen_prime(&mut rng, 256);
+        let x = gen_prime(&mut rng, 256) % &m;
+        let y = gen_prime(&mut rng, 256) % &m;
+        b.iter(|| add_mod(&x, &y, &m));
+    }
+
+    #[bench]
+    fn bench_sub_mod_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let m = gen_prime(&mut rng, 256);
+        let x = gen_prime(&mut rng, 256) % &m;
+        let y = gen_prime(&mut rng, 256) % &m;
+        b.iter(|| sub_mod(&x, &y, &m));
+    }
+
+    #[bench]
+    fn bench_mul_mod_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let m = gen_prime(&mut rng, 256);
+        let x = gen_prime(&mut rng, 256) % &m;
+        let y = gen_prime(&mut rng, 256) % &m;
+        b.iter(|| mul_mod(&x, &y, &m));
+    }
+
+    #[bench]
+    fn bench_div_mod_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let m = gen_prime(&mut rng, 256);
+        let x = gen_prime(&mut rng, 256) % &m;
+        let y = gen_prime(&mut rng, 256) % &m;
+        b.iter(|| div_mod(&x, &y, &m));
+    }
+
+    #[bench]
+    fn bench_inv_mod_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let m = gen_prime(&mut rng, 256);
+        let x = gen_prime(&mut rng, 256) % &m;
+        b.iter(|| inv_mod(&x, &m));
+    }
+
+    #[bench]
+    fn bench_legendre_symbol_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let p = gen_prime(&mut rng, 256);
+        b.iter(|| {
+            let x = Bigi::gen_random(&mut rng, 256, false);
+            legendre_symbol(&x, &p);
+        });
+    }
+
+    #[bench]
+    fn bench_sqrt_mod_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let p = gen_prime(&mut rng, 256);
+        b.iter(|| {
+            let x = Bigi::gen_random(&mut rng, 256, false);
+            let _ = sqrt_mod(&x, &p);
+        });
     }
 }

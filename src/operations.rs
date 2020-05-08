@@ -145,8 +145,7 @@ impl Bigi {
     pub fn powmod(&self, p: &Bigi, m: &Bigi) -> Bigi {
         let mut res = bigi![1];
         let mut x = self.clone();
-        let bits = p.order * BIGI_TYPE_BITS;
-        for bit in 0..bits {
+        for bit in 0..p.bit_length() {
             if p.get_bit(bit) {
                 res = res * &x;
                 res.divide(&m);
@@ -154,6 +153,17 @@ impl Bigi {
             x = x * &x;
             x.divide(&m);
         }
+        res
+    }
+
+    pub fn mod_2k(&self, k: usize) -> Bigi {
+        let mut res = self.clone();
+        let q = k / BIGI_TYPE_BITS;
+        let r = k % BIGI_TYPE_BITS;
+        for i in (q + 1)..BIGI_MAX_DIGITS {
+            res.digits[i] = 0;
+        }
+        res.digits[q] %= 1 << r;
         res
     }
 }
@@ -220,20 +230,26 @@ impl ops::Sub<&Bigi> for Bigi {
     type Output = Bigi;
 
     fn sub(self, other: &Bigi) -> Bigi {
-        let order = if self > *other { self.order } else { BIGI_MAX_DIGITS };
+        let mut res = self.clone();
+        res -= other;
+        res
+    }
+}
 
-        let mut res = bigi![0];
+
+impl ops::SubAssign<&Bigi> for Bigi {
+    fn sub_assign(&mut self, other: &Bigi) {
+        let order = if *self > *other { self.order } else { BIGI_MAX_DIGITS };
+
         let mut fw: BigiType = 0;
 
         for i in 0..order {
             let pair = self.digits[i].overflowing_sub(other.digits[i]);
-            res.digits[i] = pair.0.overflowing_sub(fw).0;
+            self.digits[i] = pair.0.overflowing_sub(fw).0;
             fw = (pair.1 || (fw == 1 && pair.0 == 0)) as BigiType;
         }
 
-        res.update_order();
-
-        res
+        self.update_order();
     }
 }
 
@@ -258,12 +274,26 @@ impl ops::Mul<&Bigi> for Bigi {
 }
 
 
+impl ops::MulAssign<&Bigi> for Bigi {
+    fn mul_assign(&mut self, other: &Bigi) {
+        *self = *self * other;
+    }
+}
+
+
 impl ops::Div<&Bigi> for Bigi {
     type Output = Bigi;
 
     fn div(self, other: &Bigi) -> Bigi {
         let mut dividend = self.clone();
-        dividend.divide(&other)
+        dividend.divide(other)
+    }
+}
+
+
+impl ops::DivAssign<&Bigi> for Bigi {
+    fn div_assign(&mut self, other: &Bigi) {
+        *self = *self / other;
     }
 }
 
@@ -272,9 +302,16 @@ impl ops::Rem<&Bigi> for Bigi {
     type Output = Bigi;
 
     fn rem(self, other: &Bigi) -> Bigi {
-        let mut dividend: Bigi = self.clone();
-        dividend.divide(&other);
-        dividend
+        let mut res = self.clone();
+        res %= other;
+        res
+    }
+}
+
+
+impl ops::RemAssign<&Bigi> for Bigi {
+    fn rem_assign(&mut self, other: &Bigi) {
+        self.divide(other);
     }
 }
 
@@ -354,6 +391,7 @@ impl ops::Shr<usize> for Bigi {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test::Bencher;
 
     #[test]
     fn test_add() {
@@ -434,5 +472,110 @@ mod tests {
         assert_eq!(bigi![0, 1].is_zero(), false);
         assert_eq!(bigi![0, 10].is_zero(), false);
         assert_eq!(bigi![5, 10].is_zero(), false);
+    }
+
+    #[test]
+    fn test_mod_2k() {
+        assert_eq!(bigi![26].mod_2k(3), bigi![2]);
+        assert_eq!(bigi![26].mod_2k(1), bigi![0]);
+        assert_eq!(bigi![1].mod_2k(5), bigi![1]);
+        assert_eq!(bigi![1, 45].mod_2k(5), bigi![1]);
+        assert_eq!(bigi![1, 45].mod_2k(38), bigi![1, 45]);
+        assert_eq!(bigi![1751744512, 2139311010, 2707718377, 1453116243, 4177958257, 2618724431, 625139, 3892860704].mod_2k(120), bigi![1751744512, 2139311010, 2707718377, 1453116243, 4177958257, 2618724431, 625139, 3892860704] % &(bigi![1] << 120));
+        assert_eq!(bigi![1751744512, 2139311010, 2707718377, 1453116243, 4177958257, 2618724431, 625139, 3892860704].mod_2k(96), bigi![1751744512, 2139311010, 2707718377, 1453116243, 4177958257, 2618724431, 625139, 3892860704] % &(bigi![1] << 96));
+    }
+
+    #[bench]
+    fn bench_add_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::gen_random(&mut rng, 256, false);
+        let y = Bigi::gen_random(&mut rng, 256, false);
+        b.iter(|| x + &y);
+    }
+
+    #[bench]
+    fn bench_sub_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::gen_random(&mut rng, 256, false);
+        let y = Bigi::gen_random(&mut rng, 256, false);
+        b.iter(|| x - &y);
+    }
+
+    #[bench]
+    fn bench_mul_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::gen_random(&mut rng, 256, false);
+        let y = Bigi::gen_random(&mut rng, 256, false);
+        b.iter(|| x * &y);
+    }
+
+    #[bench]
+    fn bench_div_256_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::gen_random(&mut rng, 256, false);
+        let y = Bigi::gen_random(&mut rng, 256, false);
+        b.iter(|| x / &y);
+    }
+
+    #[bench]
+    fn bench_div_256_128(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::gen_random(&mut rng, 256, false);
+        let y = Bigi::gen_random(&mut rng, 128, false);
+        b.iter(|| x / &y);
+    }
+
+    #[bench]
+    fn bench_mod_256_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::gen_random(&mut rng, 256, false);
+        let y = Bigi::gen_random(&mut rng, 256, false);
+        b.iter(|| x % &y);
+    }
+
+    #[bench]
+    fn bench_mod_256_128(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::gen_random(&mut rng, 256, false);
+        let y = Bigi::gen_random(&mut rng, 128, false);
+        b.iter(|| x % &y);
+    }
+
+    #[bench]
+    fn bench_cmp_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::gen_random(&mut rng, 256, false);
+        let y = Bigi::gen_random(&mut rng, 256, false);
+        b.iter(|| x > y);
+    }
+
+    #[bench]
+    fn bench_powmod_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let p = Bigi::gen_random(&mut rng, 256, false);
+        let m = Bigi::gen_random(&mut rng, 256, false);
+        let x = Bigi::gen_random(&mut rng, 256, false) % &m;
+        b.iter(|| x.powmod(&p, &m));
+    }
+
+    #[bench]
+    fn bench_shr_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::gen_random(&mut rng, 256, false);
+        b.iter(|| x >> 128);
+    }
+
+    #[bench]
+    fn bench_shl_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::gen_random(&mut rng, 256, false);
+        b.iter(|| x << 128);
+    }
+
+    #[bench]
+    fn bench_mod_2k_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::gen_random(&mut rng, 256, false);
+        b.iter(|| x.mod_2k(120));
     }
 }
