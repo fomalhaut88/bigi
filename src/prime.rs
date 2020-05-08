@@ -159,7 +159,7 @@ pub fn mul_mod(x: &Bigi, y: &Bigi, m: &Bigi) -> Bigi {
 
 
 pub fn inv_mod(x: &Bigi, m: &Bigi) -> Bigi {
-    euclidean_extended(&x, &m).0
+    euclidean_extended(&x, &m).1
 }
 
 
