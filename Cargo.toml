@@ -1,6 +1,6 @@
 [package]
 name = "bigi"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["alexander <mail@fomalhaut.su>"]
 edition = "2018"
 
