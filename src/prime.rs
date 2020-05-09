@@ -161,7 +161,11 @@ pub fn euclidean_extended(x: &Bigi, y: &Bigi) -> (Bigi, Bigi, Bigi) {
 
 
 pub fn add_mod(x: &Bigi, y: &Bigi, m: &Bigi) -> Bigi {
-    (*x + y) % m
+    let mut r = *x + y;
+    while r >= *m {
+        r -= m;
+    }
+    r
 }
 
 
