@@ -32,6 +32,27 @@ pub fn quick_prime_check(x: &Bigi) -> bool {
 }
 
 
+pub fn ferma_test(x: &Bigi, k: usize) -> bool {
+    let bits = x.bit_length();
+    let mut rng = rand::thread_rng();
+    let p = *x - &bigi![1];
+
+    for _i in 0..k {
+        let a = Bigi::gen_random(&mut rng, bits, false) % &x;
+
+        if a.is_zero() {
+            continue;
+        }
+
+        if a.powmod(&p, &x) != bigi![1] {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
 pub fn miller_rabin(x: &Bigi, k: usize) -> bool {
     /*
     Miller–Rabin primality test: https://en.wikipedia.org/wiki/Miller%E2%80%93Rabin_primality_test
@@ -98,7 +119,7 @@ pub fn gen_prime<R: Rng + ?Sized>(rng: &mut R, bits: usize) -> Bigi {
 pub fn euclidean(x: &Bigi, y: &Bigi) -> Bigi {
     let mut a = x.clone();
     let mut b = y.clone();
-    while b != bigi![0] {
+    while !b.is_zero() {
         a.divide(&b);
         mem::swap(&mut a, &mut b);
     }
@@ -115,11 +136,11 @@ pub fn euclidean_extended(x: &Bigi, y: &Bigi) -> (Bigi, Bigi, Bigi) {
     let mut ba = bigi![0];
     let mut bb = bigi![1];
 
-    while b != bigi![0] {
+    while !b.is_zero() {
         let q = a.divide(&b);
 
-        aa = aa - &(q * &ba);
-        ab = ab - &(q * &bb);
+        aa -= &(q * &ba);
+        ab -= &(q * &bb);
 
         mem::swap(&mut a, &mut b);
         mem::swap(&mut aa, &mut ba);
@@ -233,8 +254,35 @@ pub fn sqrt_mod(n: &Bigi, p: &Bigi) -> Result<(Bigi, Bigi), &'static str> {
 }
 
 
-pub fn legendre_symbol(a: &Bigi, p: &Bigi) -> BigiType {
-    BigiType::from(a.powmod(&((*p - &bigi![1]) >> 1), p))
+pub fn legendre_symbol(a: &Bigi, p: &Bigi) -> i32 {
+    /*
+    The algorithm was taken from  "Algorithmic Number Theory"
+    by Bach and Shallit (page 113).
+    The alternative (a^((p - 1) / 2) mod p):
+        BigiType::from(a.powmod(&((*p - &bigi![1]) >> 1), p)) as i32
+    */
+
+    let mut t: i32 = 1;
+    let mut ac = a.clone();
+    let mut pc = p.clone();
+
+    while !ac.is_zero() {
+        let r = BigiType::from(pc.mod_2k(3));
+        let i = (r == 3) || (r == 5);
+        while ac.is_even() {
+            ac >>= 1;
+            if i {
+                t = -t;
+            }
+        }
+        mem::swap(&mut ac, &mut pc);
+        if (r % 4 == 3) && (BigiType::from(pc.mod_2k(2)) == 3) {
+            t = -t;
+        }
+        ac %= &pc;
+    }
+
+    t
 }
 
 
@@ -248,6 +296,13 @@ mod tests {
         assert_eq!(miller_rabin(&bigi![29], 100), true);
         assert_eq!(miller_rabin(&bigi![1009], 100), true);
         assert_eq!(miller_rabin(&bigi![1001], 100), false);
+    }
+
+    #[test]
+    fn test_ferma_test() {
+        assert_eq!(ferma_test(&bigi![29], 100), true);
+        assert_eq!(ferma_test(&bigi![1009], 100), true);
+        assert_eq!(ferma_test(&bigi![1001], 100), false);
     }
 
     #[test]
@@ -316,6 +371,15 @@ mod tests {
         b.iter(|| {
             let x = Bigi::gen_random(&mut rng, 256, false);
             quick_prime_check(&x);
+        });
+    }
+
+    #[bench]
+    fn bench_ferma_test_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        b.iter(|| {
+            let x = Bigi::gen_random(&mut rng, 256, false);
+            ferma_test(&x, 1);
         });
     }
 

@@ -160,10 +160,11 @@ impl Bigi {
         let mut res = self.clone();
         let q = k / BIGI_TYPE_BITS;
         let r = k % BIGI_TYPE_BITS;
-        for i in (q + 1)..BIGI_MAX_DIGITS {
+        for i in (q + 1)..self.order {
             res.digits[i] = 0;
         }
         res.digits[q] %= 1 << r;
+        res.update_order();
         res
     }
 }

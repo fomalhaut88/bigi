@@ -104,6 +104,40 @@ mod tests {
     }
 
     #[bench]
+    fn bench_to_repr_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let n = gen_prime(&mut rng, 256);
+        let x = Bigi::gen_random(&mut rng, 256, false) % &n;
+        let mgr = MontgomeryAlg::new(256, &n);
+        b.iter(|| {
+            mgr.to_repr(&x);
+        });
+    }
+
+    #[bench]
+    fn bench_from_repr_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let n = gen_prime(&mut rng, 256);
+        let x = Bigi::gen_random(&mut rng, 256, false) % &n;
+        let mgr = MontgomeryAlg::new(256, &n);
+        b.iter(|| {
+            mgr.from_repr(&x);
+        });
+    }
+
+    #[bench]
+    fn bench_mul_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let n = gen_prime(&mut rng, 256);
+        let x = Bigi::gen_random(&mut rng, 256, false) % &n;
+        let y = Bigi::gen_random(&mut rng, 256, false) % &n;
+        let mgr = MontgomeryAlg::new(256, &n);
+        b.iter(|| {
+            mgr.mul(&x, &y);
+        });
+    }
+
+    #[bench]
     fn bench_powmod_256(b: &mut Bencher) {
         let mut rng = rand::thread_rng();
         let n = gen_prime(&mut rng, 256);

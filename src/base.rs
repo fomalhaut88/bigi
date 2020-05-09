@@ -54,6 +54,7 @@ macro_rules! bigi {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test::Bencher;
 
     #[test]
     fn test_bigi_macro() {
@@ -63,5 +64,24 @@ mod tests {
         assert_eq!(x.digits[2], 6);
         assert_eq!(x.digits[3], 90);
         assert_eq!(x.digits[4], 0);
+    }
+
+    #[bench]
+    fn bench_update_order_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let mut x = Bigi::gen_random(&mut rng, 256, false);
+        b.iter(|| x.update_order());
+    }
+
+    #[bench]
+    fn bench_bigi1_256(b: &mut Bencher) {
+        b.iter(|| bigi![1]);
+    }
+
+    #[bench]
+    fn bench_clone_256(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::gen_random(&mut rng, 256, false);
+        b.iter(|| x.clone());
     }
 }
