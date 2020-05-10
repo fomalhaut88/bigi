@@ -202,50 +202,57 @@ pub fn sqrt_mod(n: &Bigi, p: &Bigi) -> Result<(Bigi, Bigi), &'static str> {
         return Err("Non-quadratic residue");
     }
 
-    // Defining q and s such that p - 1 = q * 2^s
-    let (q, s) = {
-        let mut q = *p - &bigi![1];
-        let mut s: usize = 0;
-        while q.is_even() {
-            q >>= 1;
-            s += 1;
-        }
-        (q, s)
-    };
+    let mut r;
+    if p.mod_2k(2) == bigi![3] {
+        // Case p = 3 (mod 4)
+        r = n.powmod(&((*p + &bigi![1]) >> 2), &p);
 
-    // Searching for a non-quadratic residue
-    let z: Bigi = {
-        let mut z = bigi![2];
-        loop {
-            if legendre_symbol(&z, &p) != 1 {
-                break;
+    } else {
+        // Defining q and s such that p - 1 = q * 2^s
+        let (q, s) = {
+            let mut q = *p - &bigi![1];
+            let mut s: usize = 0;
+            while q.is_even() {
+                q >>= 1;
+                s += 1;
             }
-            z += &bigi![1];
-        }
-        z
-    };
-
-    let mut c = z.powmod(&q, &p);
-    let mut r = n.powmod(&((q + &bigi![1]) >> 1), &p);
-    let mut t = n.powmod(&q, &p);
-    let mut m = s;
-
-    // Tonelli–Shanks's loop
-    while t != bigi![1] {
-        let i = {
-            let mut tp = t.clone();
-            let mut i: usize = 0;
-            while tp != bigi![1] {
-                tp = mul_mod(&tp, &tp, &p);
-                i += 1;
-            }
-            i
+            (q, s)
         };
-        let b = c.powmod(&(bigi![1] << (m - i - 1)), &p);
-        r = mul_mod(&r, &b, &p);
-        c = mul_mod(&b, &b, &p);
-        t = mul_mod(&t, &c, &p);
-        m = i;
+
+        // Searching for a non-quadratic residue
+        let z: Bigi = {
+            let mut z = bigi![2];
+            loop {
+                if legendre_symbol(&z, &p) != 1 {
+                    break;
+                }
+                z += &bigi![1];
+            }
+            z
+        };
+
+        let mut c = z.powmod(&q, &p);
+        r = n.powmod(&((q + &bigi![1]) >> 1), &p);
+        let mut t = n.powmod(&q, &p);
+        let mut m = s;
+
+        // Tonelli–Shanks's loop
+        while t != bigi![1] {
+            let i = {
+                let mut tp = t.clone();
+                let mut i: usize = 0;
+                while tp != bigi![1] {
+                    tp = mul_mod(&tp, &tp, &p);
+                    i += 1;
+                }
+                i
+            };
+            let b = c.powmod(&(bigi![1] << (m - i - 1)), &p);
+            r = mul_mod(&r, &b, &p);
+            c = mul_mod(&b, &b, &p);
+            t = mul_mod(&t, &c, &p);
+            m = i;
+        }
     }
 
     // Second root
