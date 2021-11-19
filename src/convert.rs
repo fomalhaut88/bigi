@@ -1,58 +1,86 @@
-use std::convert;
-use crate::{bigi, base::{Bigi, BigiType, Bigi2Type, BIGI_TYPE_BITS, BIGI_MAX_DIGITS}};
+//! This module implements converting between `Bigi` with different sizes and
+//! with `u64`.
+//!
+//! ```rust
+//! use bigi::Bigi;
+//!
+//! let a = Bigi::<4>::from(25);
+//! assert_eq!(Bigi::<8>::from(&a), Bigi::<8>::from(25));
+//! assert_eq!(u64::from(&a), 25);
+//! ```
+
+use std::{convert, cmp};
+use crate::base::Bigi;
 
 
-impl convert::From<BigiType> for Bigi {
-    fn from(z: BigiType) -> Self {
-        bigi![z]
+impl<const N: usize> convert::From<u64> for Bigi<N> {
+    fn from(z: u64) -> Self {
+        let mut res = Self::new();
+        res.digits[0] = z;
+        res
     }
 }
 
 
-impl convert::From<Bigi> for BigiType {
-    fn from(a: Bigi) -> BigiType {
+impl<const N: usize> convert::From<&Bigi<N>> for u64 {
+    fn from(a: &Bigi<N>) -> u64 {
         a.digits[0]
     }
 }
 
 
-impl convert::From<Bigi2Type> for Bigi {
-    fn from(z: Bigi2Type) -> Self {
-        bigi![z as BigiType, (z >> BIGI_TYPE_BITS) as BigiType]
-    }
-}
-
-
-impl convert::From<Bigi> for Bigi2Type {
-    fn from(a: Bigi) -> Bigi2Type {
-        ((a.digits[1] as Bigi2Type) << BIGI_TYPE_BITS) + (a.digits[0] as Bigi2Type)
+impl<const N: usize, const M: usize> convert::From<&Bigi<M>> for Bigi<N> {
+    fn from(a: &Bigi<M>) -> Self {
+        let mut res = Bigi::<N>::new();
+        let size = cmp::min(N, M);
+        res.digits[..size].clone_from_slice(&a.digits[..size]);
+        res
     }
 }
 
 
 #[cfg(test)]
 mod tests {
+    use crate::bigi;
     use super::*;
+    use test::Bencher;
 
     #[test]
-    fn test_from_bigitype() {
-        assert_eq!(Bigi::from(28 as u32), bigi![28]);
+    fn test_from_u64() {
+        assert_eq!(Bigi::<8>::from(1000000000000), bigi![8; 1000000000000]);
     }
 
     #[test]
-    fn test_from_bigitype2() {
-        assert_eq!(Bigi::from(1000000000000 as u64), bigi![3567587328, 232]);
+    fn test_to_u64() {
+        assert_eq!(u64::from(&bigi![8; 1000000000000]), 1000000000000);
     }
 
     #[test]
-    fn test_to_bigitype() {
-        assert_eq!(u32::from(bigi![28]), 28);
-        assert_eq!(u32::from(bigi![28, 11, 64]), 28);
+    fn test_from_bigi() {
+        assert_eq!(
+            Bigi::<8>::from(&bigi![4; 2, 4, 0, 11]),
+            bigi![8; 2, 4, 0, 11, 0, 0, 0, 0]
+        );
+        assert_eq!(
+            Bigi::<4>::from(&bigi![8; 2, 4, 0, 11, 5, 87, 1, 111]),
+            bigi![4; 2, 4, 0, 11]
+        );
     }
 
-    #[test]
-    fn test_to_bigitype2() {
-        assert_eq!(u64::from(bigi![3567587328, 232]), 1000000000000);
-        assert_eq!(u64::from(bigi![3567587328, 232, 0, 29]), 1000000000000);
+    #[bench]
+    fn bench_from_u64(bencher: &mut Bencher) {
+        bencher.iter(|| Bigi::<8>::from(1000000000000));
+    }
+
+    #[bench]
+    fn bench_to_u64(bencher: &mut Bencher) {
+        let a = bigi![8; 1000000000000];
+        bencher.iter(|| u64::from(&a));
+    }
+
+    #[bench]
+    fn bench_from_bigi(bencher: &mut Bencher) {
+        let a = bigi![4; 2, 4, 0, 11];
+        bencher.iter(|| Bigi::<8>::from(&a));
     }
 }

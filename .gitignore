@@ -1,5 +1,1 @@
 /target
-**/*.rs.bk
-
-/src/constants.rs
-/src/main.rs

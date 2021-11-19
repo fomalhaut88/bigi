@@ -1,42 +1,65 @@
-use std::mem;
+//! This module implements basics for Bigi.
 
-include!("constants.rs");
-
-
-pub type BigiType = u32;
-pub type Bigi2Type = u64;
-
-pub const BIGI_BYTES: usize = BIGI_BITS / 8;
-pub const BIGI_TYPE_BYTES: usize = mem::size_of::<BigiType>();
-pub const BIGI_TYPE_BITS: usize = 8 * BIGI_TYPE_BYTES;
-pub const BIGI_MAX_DIGITS: usize = BIGI_BYTES / BIGI_TYPE_BYTES;
+use std::cmp;
 
 
-#[derive(Clone, Copy)]
-pub struct Bigi {
-    pub digits: [BigiType; BIGI_MAX_DIGITS],
-    pub order: usize
+/// Type for multiprecision integers.
+#[derive(Debug, Clone, Copy)]
+pub struct Bigi<const N: usize> {
+    pub digits: [u64; N]
 }
 
 
-impl Bigi {
-    pub fn update_order(&mut self) {
-        for i in (0..BIGI_MAX_DIGITS).rev() {
-            if self.digits[i] != 0 {
-                self.order = i + 1;
-                return;
-            }
-        }
-        self.order = 0;
+impl<const N: usize> Bigi<N> {
+    /// Creates a zero ingeter.
+    /// ```rust
+    /// use bigi::Bigi;
+    ///
+    /// let z = Bigi::<8>::new();
+    /// ```
+    pub fn new() -> Self {
+        let digits: [u64; N] = [0; N];
+        Self { digits }
+    }
+
+    /// Creates an integer with digits given as a vector of *u64*.
+    /// ```rust
+    /// use bigi::Bigi;
+    ///
+    /// let z = Bigi::<8>::from_vec(&vec![2, 4, 0, 11]);
+    /// ```
+    pub fn from_vec(v: &Vec<u64>) -> Self {
+        let mut res = Self::new();
+        let size = cmp::min(N, v.len());
+        res.digits[..size].clone_from_slice(&v[..size]);
+        res
+    }
+
+    /// Converts an integer to a vector of *u64*.
+    /// ```rust
+    /// use bigi::Bigi;
+    ///
+    /// let z = Bigi::<8>::new();
+    /// assert_eq!(z.to_vec(), [0, 0, 0, 0, 0, 0, 0, 0]);
+    /// ```
+    pub fn to_vec(&self) -> Vec<u64> {
+        self.digits.to_vec()
     }
 }
 
 
+/// A macros to create an integer by listing its *u64* digits.
+/// ```rust
+/// use bigi::{bigi, Bigi};
+///
+/// let z = bigi![8; 2, 4, 0, 11];
+/// ```
 #[macro_export]
 macro_rules! bigi {
-    ($($x:expr),*) => [{
-        let mut digits = [0; BIGI_MAX_DIGITS];
+    ($n:expr; $($x:expr),*) => [{
+        let mut digits: [u64; $n] = [0; $n];
         let mut idx: usize = 0;
+
         $(
             #[allow(unused_assignments)]
             {
@@ -44,9 +67,7 @@ macro_rules! bigi {
                 idx += 1;
             }
         )*
-        let mut res = Bigi { digits: digits, order: 0 };
-        res.update_order();
-        res
+        Bigi { digits }
     }]
 }
 
@@ -57,31 +78,19 @@ mod tests {
     use test::Bencher;
 
     #[test]
-    fn test_bigi_macro() {
-        let x = bigi![2, 5, 6, 90];
-        assert_eq!(x.digits[0], 2);
-        assert_eq!(x.digits[1], 5);
-        assert_eq!(x.digits[2], 6);
-        assert_eq!(x.digits[3], 90);
-        assert_eq!(x.digits[4], 0);
+    fn test_macro_bigi() {
+        let a = bigi![8; 2, 4, 0, 11, 5, 87, 1, 111];
+        assert_eq!(a.to_vec(), vec![2, 4, 0, 11, 5, 87, 1, 111]);
     }
 
     #[bench]
-    fn bench_update_order_256(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-        let mut x = Bigi::gen_random(&mut rng, 256, false);
-        b.iter(|| x.update_order());
+    fn bench_macro_bigi(bencher: &mut Bencher) {
+        bencher.iter(|| bigi![8; 2, 4, 0, 11, 5, 87, 1, 111]);
     }
 
     #[bench]
-    fn bench_bigi1_256(b: &mut Bencher) {
-        b.iter(|| bigi![1]);
-    }
-
-    #[bench]
-    fn bench_clone_256(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-        let x = Bigi::gen_random(&mut rng, 256, false);
-        b.iter(|| x.clone());
+    fn bench_from_vec(bencher: &mut Bencher) {
+        let v: Vec<u64> = vec![2, 4, 0, 11, 5, 87, 1, 111];
+        bencher.iter(|| Bigi::<8>::from_vec(&v));
     }
 }
