@@ -27,11 +27,11 @@ const QUICK_PRIMES: &[u64] = &[3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41,
 /// ```rust
 /// use bigi::{Bigi, quick_prime_check};
 ///
-/// assert_eq!(quick_prime_check(&Bigi::<8>::from(11)), true);
-/// assert_eq!(quick_prime_check(&Bigi::<8>::from(121)), false);
-/// assert_eq!(quick_prime_check(&Bigi::<8>::from(541)), true);
+/// assert_eq!(quick_prime_check(&Bigi::<4>::from(11)), true);
+/// assert_eq!(quick_prime_check(&Bigi::<4>::from(121)), false);
+/// assert_eq!(quick_prime_check(&Bigi::<4>::from(541)), true);
 /// assert_eq!(
-///     quick_prime_check(&Bigi::<8>::from(282943)), true
+///     quick_prime_check(&Bigi::<4>::from(282943)), true
 /// );  // Though 282943 = 523 * 541
 /// ```
 pub fn quick_prime_check<const N: usize>(x: &Bigi<N>) -> bool {
@@ -53,10 +53,10 @@ pub fn quick_prime_check<const N: usize>(x: &Bigi<N>) -> bool {
 /// ```rust
 /// use bigi::{Bigi, fermat_test};
 ///
-/// assert_eq!(fermat_test(&Bigi::<8>::from(11), 10), true);
-/// assert_eq!(fermat_test(&Bigi::<8>::from(121), 10), false);
-/// assert_eq!(fermat_test(&Bigi::<8>::from(541), 10), true);
-/// assert_eq!(fermat_test(&Bigi::<8>::from(282943), 10), false);
+/// assert_eq!(fermat_test(&Bigi::<4>::from(11), 10), true);
+/// assert_eq!(fermat_test(&Bigi::<4>::from(121), 10), false);
+/// assert_eq!(fermat_test(&Bigi::<4>::from(541), 10), true);
+/// assert_eq!(fermat_test(&Bigi::<4>::from(282943), 10), false);
 /// ```
 pub fn fermat_test<const N: usize>(x: &Bigi<N>, k: usize) -> bool {
     let one = Bigi::<N>::from(1);
@@ -85,10 +85,10 @@ pub fn fermat_test<const N: usize>(x: &Bigi<N>, k: usize) -> bool {
 /// ```rust
 /// use bigi::{Bigi, miller_rabin};
 ///
-/// assert_eq!(miller_rabin(&Bigi::<8>::from(11), 10), true);
-/// assert_eq!(miller_rabin(&Bigi::<8>::from(121), 10), false);
-/// assert_eq!(miller_rabin(&Bigi::<8>::from(541), 10), true);
-/// assert_eq!(miller_rabin(&Bigi::<8>::from(282943), 10), false);
+/// assert_eq!(miller_rabin(&Bigi::<4>::from(11), 10), true);
+/// assert_eq!(miller_rabin(&Bigi::<4>::from(121), 10), false);
+/// assert_eq!(miller_rabin(&Bigi::<4>::from(541), 10), true);
+/// assert_eq!(miller_rabin(&Bigi::<4>::from(282943), 10), false);
 /// ```
 pub fn miller_rabin<const N: usize>(x: &Bigi<N>, k: usize) -> bool {
     let one = Bigi::<N>::from(1);
@@ -143,7 +143,7 @@ pub fn miller_rabin<const N: usize>(x: &Bigi<N>, k: usize) -> bool {
 /// use bigi::gen_prime;
 ///
 /// let mut rng = rand::thread_rng();
-/// let p = gen_prime::<_, 8>(&mut rng, 256);
+/// let p = gen_prime::<_, 4>(&mut rng, 256);
 /// ```
 pub fn gen_prime<R: Rng + ?Sized, const N: usize>(
             rng: &mut R, bits: usize) -> Bigi<N> {
@@ -165,10 +165,10 @@ pub fn gen_prime<R: Rng + ?Sized, const N: usize>(
 /// ```rust
 /// use bigi::{Bigi, euclidean};
 ///
-/// let a = Bigi::<8>::from(110);
-/// let b = Bigi::<8>::from(88);
+/// let a = Bigi::<4>::from(110);
+/// let b = Bigi::<4>::from(88);
 /// let c = euclidean(&a, &b);
-/// assert_eq!(c, Bigi::<8>::from(22));
+/// assert_eq!(c, Bigi::<4>::from(22));
 /// ```
 pub fn euclidean<const N: usize>(x: &Bigi<N>, y: &Bigi<N>) -> Bigi<N> {
     let mut a = x.clone();
@@ -187,14 +187,14 @@ pub fn euclidean<const N: usize>(x: &Bigi<N>, y: &Bigi<N>) -> Bigi<N> {
 /// ```rust
 /// use bigi::{Bigi, euclidean_extended};
 ///
-/// let a = Bigi::<8>::from(110);
-/// let b = Bigi::<8>::from(66);
+/// let a = Bigi::<4>::from(110);
+/// let b = Bigi::<4>::from(66);
 /// let (c, ra, rb) = euclidean_extended(&a, &b);  // c == a * ra - b * rb
-/// assert_eq!(c, Bigi::<8>::from(22));
-/// assert_eq!(ra, Bigi::<8>::from(65));
-/// assert_eq!(rb, Bigi::<8>::from(108));
+/// assert_eq!(c, Bigi::<4>::from(22));
+/// assert_eq!(ra, Bigi::<4>::from(65));
+/// assert_eq!(rb, Bigi::<4>::from(108));
 /// ```
-pub fn euclidean_extended<const N: usize>(
+pub fn euclidean_extended<const N: usize> (
             x: &Bigi<N>, y: &Bigi<N>) -> (Bigi<N>, Bigi<N>, Bigi<N>) {
     let mut a = x.clone();
     let mut b = y.clone();
@@ -203,6 +203,7 @@ pub fn euclidean_extended<const N: usize>(
     let mut ab = Bigi::<N>::from(0);
     let mut ba = Bigi::<N>::from(0);
     let mut bb = Bigi::<N>::from(1);
+    let mut inv = false;
 
     while !b.is_zero() {
         let q = a.divide(&b);
@@ -213,15 +214,15 @@ pub fn euclidean_extended<const N: usize>(
         mem::swap(&mut a, &mut b);
         mem::swap(&mut aa, &mut ba);
         mem::swap(&mut ab, &mut bb);
+
+        inv = !inv;
     }
 
     ab = Bigi::<N>::from(0) - &ab;
 
-    if aa > *y {
-        aa = *y + &aa;
-    }
-    if ab > *x {
-        ab = *x + &ab;
+    if inv {
+        aa += y;
+        ab += x;
     }
 
     (a, aa, ab)
@@ -231,11 +232,12 @@ pub fn euclidean_extended<const N: usize>(
 /// Performs modular addition: `(x + y) % m`.
 pub fn add_mod<const N: usize>(
             x: &Bigi<N>, y: &Bigi<N>, m: &Bigi<N>) -> Bigi<N> {
-    let mut r = *x + y;
-    while r >= *m {
-        r -= m;
+    let yi = *m - y;
+    if *x < yi {
+        *x + y
+    } else {
+        *x - &yi
     }
-    r
 }
 
 
@@ -253,7 +255,9 @@ pub fn sub_mod<const N: usize>(
 /// Performs modular multiplication `(x * y) % m`.
 pub fn mul_mod<const N: usize>(
             x: &Bigi<N>, y: &Bigi<N>, m: &Bigi<N>) -> Bigi<N> {
-    (*x * y) % m
+    let mut pair = x.multiply_overflowing(y);
+    pair.0.divide_overflowing(m, &pair.1);
+    pair.0
 }
 
 
@@ -281,8 +285,8 @@ pub fn div_mod<const N: usize>(
 /// ```rust
 /// use bigi::{Bigi, legendre_symbol};
 ///
-/// assert_eq!(legendre_symbol(&Bigi::<8>::from(6), &Bigi::<8>::from(137)), -1);
-/// assert_eq!(legendre_symbol(&Bigi::<8>::from(8), &Bigi::<8>::from(137)), 1);
+/// assert_eq!(legendre_symbol(&Bigi::<4>::from(6), &Bigi::<4>::from(137)), -1);
+/// assert_eq!(legendre_symbol(&Bigi::<4>::from(8), &Bigi::<4>::from(137)), 1);
 /// ```
 pub fn legendre_symbol<const N: usize>(a: &Bigi<N>, p: &Bigi<N>) -> i32 {
     /*
@@ -322,11 +326,11 @@ pub fn legendre_symbol<const N: usize>(a: &Bigi<N>, p: &Bigi<N>) -> i32 {
 /// use bigi::{Bigi, sqrt_mod};
 ///
 /// assert_eq!(
-///     sqrt_mod(&Bigi::<8>::from(8), &Bigi::<8>::from(137)),
-///     Ok((Bigi::<8>::from(62), Bigi::<8>::from(75)))
+///     sqrt_mod(&Bigi::<4>::from(8), &Bigi::<4>::from(137)),
+///     Ok((Bigi::<4>::from(62), Bigi::<4>::from(75)))
 /// );
 /// assert_eq!(
-///     sqrt_mod(&Bigi::<8>::from(6), &Bigi::<8>::from(137)),
+///     sqrt_mod(&Bigi::<4>::from(6), &Bigi::<4>::from(137)),
 ///     Err("Non-quadratic residue")
 /// );
 /// ```
@@ -428,12 +432,12 @@ mod tests {
     fn test_gen_prime() {
         let mut rng = rand::thread_rng();
 
-        assert_eq!(gen_prime::<_, 8>(&mut rng, 128).bit_length(), 128);
-        assert_eq!(gen_prime::<_, 8>(&mut rng, 65).bit_length(), 65);
-        assert_eq!(gen_prime::<_, 8>(&mut rng, 96).bit_length(), 96);
-        assert_eq!(gen_prime::<_, 8>(&mut rng, 33).bit_length(), 33);
-        assert_eq!(gen_prime::<_, 8>(&mut rng, 15).bit_length(), 15);
-        assert_eq!(gen_prime::<_, 8>(&mut rng, 3).bit_length(), 3);
+        assert_eq!(gen_prime::<_, 4>(&mut rng, 128).bit_length(), 128);
+        assert_eq!(gen_prime::<_, 4>(&mut rng, 65).bit_length(), 65);
+        assert_eq!(gen_prime::<_, 4>(&mut rng, 96).bit_length(), 96);
+        assert_eq!(gen_prime::<_, 4>(&mut rng, 33).bit_length(), 33);
+        assert_eq!(gen_prime::<_, 4>(&mut rng, 15).bit_length(), 15);
+        assert_eq!(gen_prime::<_, 4>(&mut rng, 3).bit_length(), 3);
     }
 
     #[test]
@@ -448,7 +452,7 @@ mod tests {
     fn bench_quick_prime_check_256(bencher: &mut Bencher) {
         let mut rng = rand::thread_rng();
         bencher.iter(|| {
-            let x = Bigi::<8>::gen_random(&mut rng, 256, false);
+            let x = Bigi::<4>::gen_random(&mut rng, 256, false);
             quick_prime_check(&x);
         });
     }
@@ -457,7 +461,7 @@ mod tests {
     fn bench_fermat_test_256(bencher: &mut Bencher) {
         let mut rng = rand::thread_rng();
         bencher.iter(|| {
-            let x = Bigi::<8>::gen_random(&mut rng, 256, false);
+            let x = Bigi::<4>::gen_random(&mut rng, 256, false);
             fermat_test(&x, 1);
         });
     }
@@ -466,7 +470,7 @@ mod tests {
     fn bench_miller_rabin_256(bencher: &mut Bencher) {
         let mut rng = rand::thread_rng();
         bencher.iter(|| {
-            let x = Bigi::<8>::gen_random(&mut rng, 256, false);
+            let x = Bigi::<4>::gen_random(&mut rng, 256, false);
             miller_rabin(&x, 1);
         });
     }
@@ -474,93 +478,93 @@ mod tests {
     #[bench]
     fn bench_gen_prime_32(bencher: &mut Bencher) {
         let mut rng = rand::thread_rng();
-        bencher.iter(|| gen_prime::<_, 8>(&mut rng, 32));
+        bencher.iter(|| gen_prime::<_, 4>(&mut rng, 32));
     }
 
     #[bench]
     fn bench_gen_prime_64(bencher: &mut Bencher) {
         let mut rng = rand::thread_rng();
-        bencher.iter(|| gen_prime::<_, 8>(&mut rng, 64));
+        bencher.iter(|| gen_prime::<_, 4>(&mut rng, 64));
     }
 
     #[bench]
     fn bench_gen_prime_128(bencher: &mut Bencher) {
         let mut rng = rand::thread_rng();
-        bencher.iter(|| gen_prime::<_, 8>(&mut rng, 128));
+        bencher.iter(|| gen_prime::<_, 4>(&mut rng, 128));
     }
 
     #[bench]
     fn bench_gen_prime_256(bencher: &mut Bencher) {
         let mut rng = rand::thread_rng();
-        bencher.iter(|| gen_prime::<_, 8>(&mut rng, 256));
+        bencher.iter(|| gen_prime::<_, 4>(&mut rng, 256));
     }
 
     #[bench]
     fn bench_euclidean_256(bencher: &mut Bencher) {
         let mut rng = rand::thread_rng();
-        let x = Bigi::<8>::gen_random(&mut rng, 256, false);
-        let y = Bigi::<8>::gen_random(&mut rng, 256, false);
+        let x = Bigi::<4>::gen_random(&mut rng, 256, false);
+        let y = Bigi::<4>::gen_random(&mut rng, 256, false);
         bencher.iter(|| euclidean(&x, &y));
     }
 
     #[bench]
     fn bench_euclidean_extended_256(bencher: &mut Bencher) {
         let mut rng = rand::thread_rng();
-        let x = Bigi::<8>::gen_random(&mut rng, 256, false);
-        let y = Bigi::<8>::gen_random(&mut rng, 256, false);
+        let x = Bigi::<4>::gen_random(&mut rng, 256, false);
+        let y = Bigi::<4>::gen_random(&mut rng, 256, false);
         bencher.iter(|| euclidean_extended(&x, &y));
     }
 
     #[bench]
     fn bench_add_mod_256(bencher: &mut Bencher) {
         let mut rng = rand::thread_rng();
-        let m = gen_prime::<_, 8>(&mut rng, 256);
-        let x = gen_prime::<_, 8>(&mut rng, 256) % &m;
-        let y = gen_prime::<_, 8>(&mut rng, 256) % &m;
+        let m = gen_prime::<_, 4>(&mut rng, 256);
+        let x = gen_prime::<_, 4>(&mut rng, 256) % &m;
+        let y = gen_prime::<_, 4>(&mut rng, 256) % &m;
         bencher.iter(|| add_mod(&x, &y, &m));
     }
 
     #[bench]
     fn bench_sub_mod_256(bencher: &mut Bencher) {
         let mut rng = rand::thread_rng();
-        let m = gen_prime::<_, 8>(&mut rng, 256);
-        let x = gen_prime::<_, 8>(&mut rng, 256) % &m;
-        let y = gen_prime::<_, 8>(&mut rng, 256) % &m;
+        let m = gen_prime::<_, 4>(&mut rng, 256);
+        let x = gen_prime::<_, 4>(&mut rng, 256) % &m;
+        let y = gen_prime::<_, 4>(&mut rng, 256) % &m;
         bencher.iter(|| sub_mod(&x, &y, &m));
     }
 
     #[bench]
     fn bench_mul_mod_256(bencher: &mut Bencher) {
         let mut rng = rand::thread_rng();
-        let m = gen_prime::<_, 8>(&mut rng, 256);
-        let x = gen_prime::<_, 8>(&mut rng, 256) % &m;
-        let y = gen_prime::<_, 8>(&mut rng, 256) % &m;
+        let m = gen_prime::<_, 4>(&mut rng, 256);
+        let x = gen_prime::<_, 4>(&mut rng, 256) % &m;
+        let y = gen_prime::<_, 4>(&mut rng, 256) % &m;
         bencher.iter(|| mul_mod(&x, &y, &m));
     }
 
     #[bench]
     fn bench_inv_mod_256(bencher: &mut Bencher) {
         let mut rng = rand::thread_rng();
-        let m = gen_prime::<_, 8>(&mut rng, 256);
-        let x = gen_prime::<_, 8>(&mut rng, 256) % &m;
+        let m = gen_prime::<_, 4>(&mut rng, 256);
+        let x = gen_prime::<_, 4>(&mut rng, 256) % &m;
         bencher.iter(|| inv_mod(&x, &m));
     }
 
     #[bench]
     fn bench_div_mod_256(bencher: &mut Bencher) {
         let mut rng = rand::thread_rng();
-        let m = gen_prime::<_, 8>(&mut rng, 256);
-        let x = gen_prime::<_, 8>(&mut rng, 256) % &m;
-        let y = gen_prime::<_, 8>(&mut rng, 256) % &m;
+        let m = gen_prime::<_, 4>(&mut rng, 256);
+        let x = gen_prime::<_, 4>(&mut rng, 256) % &m;
+        let y = gen_prime::<_, 4>(&mut rng, 256) % &m;
         bencher.iter(|| div_mod(&x, &y, &m));
     }
 
     #[bench]
     fn bench_legendre_symbol_256(bencher: &mut Bencher) {
         let mut rng = rand::thread_rng();
-        let p = gen_prime::<_, 8>(&mut rng, 256);
+        let p = gen_prime::<_, 4>(&mut rng, 256);
         bencher.iter(|| {
-            let x = Bigi::<8>::gen_random(&mut rng, 256, false);
+            let x = Bigi::<4>::gen_random(&mut rng, 255, false);
             legendre_symbol(&x, &p);
         });
     }
@@ -568,9 +572,9 @@ mod tests {
     #[bench]
     fn bench_sqrt_mod_256(b: &mut Bencher) {
         let mut rng = rand::thread_rng();
-        let p = gen_prime::<_, 8>(&mut rng, 256);
+        let p = gen_prime::<_, 4>(&mut rng, 256);
         b.iter(|| {
-            let x = Bigi::<8>::gen_random(&mut rng, 256, false);
+            let x = Bigi::<4>::gen_random(&mut rng, 255, false);
             let _ = sqrt_mod(&x, &p);
         });
     }

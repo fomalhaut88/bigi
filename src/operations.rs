@@ -209,15 +209,29 @@ impl<const N: usize> Bigi<N> {
     /// assert_eq!(r, bigi![8; 4]);
     /// ```
     pub fn powmod(&self, p: &Bigi<N>, m: &Bigi<N>) -> Bigi<N> {
+        // let mut res = Bigi::<N>::from(1);
+        // let mut x = self.clone();
+        // for bit in 0..p.bit_length() {
+        //     if p.get_bit(bit) {
+        //         res = res * &x;
+        //         res.divide(&m);
+        //     }
+        //     x = x * &x;
+        //     x.divide(&m);
+        // }
+        // res
+
         let mut res = Bigi::<N>::from(1);
         let mut x = self.clone();
         for bit in 0..p.bit_length() {
             if p.get_bit(bit) {
-                res = res * &x;
-                res.divide(&m);
+                let pair = res.multiply_overflowing(&x);
+                res = pair.0;
+                res.divide_overflowing(&m, &pair.1);
             }
-            x = x * &x;
-            x.divide(&m);
+            let pair = x.multiply_overflowing(&x);
+            x = pair.0;
+            x.divide_overflowing(&m, &pair.1);
         }
         res
     }
@@ -237,6 +251,178 @@ impl<const N: usize> Bigi<N> {
             res.digits[i] = 0;
         }
         res.digits[q] &= (1 << r) - 1;
+        res
+    }
+
+    /// Multiplitcation with overflow.
+    /// ```rust
+    /// use bigi::{bigi, Bigi};
+    ///
+    /// let a = bigi![2; 4402752814420623592, 77189580264184];
+    /// let b = bigi![2; 16242343048349248772, 4571967601559393757];
+    /// let (c, overflow) = a.multiply_overflowing(&b);
+    ///
+    /// assert_eq!(c, bigi![2; 18314275272483195808, 4916496906824170722]);
+    /// assert_eq!(overflow, bigi![2; 14967786748685025341, 19131195116908]);
+    /// ```
+    pub fn multiply_overflowing(&self, other: &Bigi<N>) -> (Bigi<N>, Bigi<N>) {
+        let mut res = Bigi::<N>::new();
+        let mut overflow = Bigi::<N>::new();
+        for i in 0..N {
+            let mut fw: u128 = 0;
+            for j in 0..(N - i) {
+                fw = (other.digits[i] as u128) * (self.digits[j] as u128) +
+                     (res.digits[i + j] as u128) + fw;
+                res.digits[i + j] = fw as u64;
+                fw >>= 64;
+            }
+            for j in (N - i)..N {
+                fw = (other.digits[i] as u128) * (self.digits[j] as u128) +
+                     (overflow.digits[i + j - N] as u128) + fw;
+                overflow.digits[i + j - N] = fw as u64;
+                fw >>= 64;
+            }
+            if fw > 0 {
+                overflow.digits[i] += fw as u64;
+            }
+        }
+        (res, overflow)
+    }
+
+    /// Division with overflow.
+    /// ```rust
+    /// use bigi::{bigi, Bigi};
+    ///
+    /// let mut c = bigi![2; 18314275272483195888, 4916496906824170722];
+    /// let overflow = bigi![2; 14967786748685025341, 19131195116908];
+    /// let b = bigi![2; 16242343048349248772, 4571967601559393757];
+    ///
+    /// let a = c.divide_overflowing(&b, &overflow);
+    ///
+    /// assert_eq!(a, bigi![2; 4402752814420623592, 77189580264184]);
+    /// assert_eq!(c, bigi![2; 80]);
+    /// ```
+    pub fn divide_overflowing(&mut self, divisor: &Bigi<N>, overflow: &Bigi<N>
+                ) -> Bigi<N> {
+        if overflow.is_zero() {
+            return self.divide(divisor);
+        }
+
+        let mut res = Bigi::<N>::new();
+        let mut overflow_mut = overflow.clone();
+
+        let order1 = overflow_mut.get_order() + N;
+        let order2 = divisor.get_order();
+
+        let mut shf = order1 - order2;
+
+        loop {
+            let extra = if order2 + shf < N {
+                self.digits[order2 + shf]
+            } else if order2 + shf - N < N {
+                overflow_mut.digits[order2 + shf - N]
+            } else {
+                0u64
+            };
+
+            // Skipping if the divider is less than shifted divisor
+            if extra == 0 {
+                let is_less: bool = {
+                    let mut result = false;
+                    for i in (0..order2).rev() {
+                        let value = if i + shf < N {
+                            self.digits[i + shf]
+                        } else {
+                            overflow_mut.digits[i + shf - N]
+                        };
+                        if value > divisor.digits[i] {
+                            result = false;
+                            break;
+                        }
+                        if value < divisor.digits[i] {
+                            result = true;
+                            break;
+                        }
+                    }
+                    result
+                };
+
+                if is_less {
+                    if shf != 0 {
+                        shf -= 1;
+                        continue;
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            // Calculating factor
+            let factor = {
+                let top = {
+                    let overflow_order = overflow_mut.get_order();
+                    if overflow_order >= 2 {
+                        overflow_mut.lead_u128()
+                    } else if overflow_order == 0 {
+                        self.lead_u128()
+                    } else {
+                        ((overflow_mut.digits[0] as u128) << 64) +
+                        (self.digits[N - 1] as u128)
+                    }
+                };
+                let result;
+
+                let bottom = if extra > 0 {
+                    divisor.digits[order2 - 1] as u128
+                } else {
+                    if order2 == 1 && shf > 0 {
+                        divisor.lead_u128() << 64
+                    } else {
+                        divisor.lead_u128()
+                    }
+                };
+
+                if top == bottom {
+                    result = 1;
+                } else {
+                    result = top / (bottom + 1);
+                }
+
+                result as u64
+            };
+
+            // Adding factor to the result
+            res.digits[shf] += factor;
+
+            // Reducing dividend
+            let mut fw: u128 = 0;
+            for i in 0..order2 {
+                fw = (divisor.digits[i] as u128) * (factor as u128) + fw;
+
+                let pair;
+                if i + shf < N {
+                    pair = self.digits[i + shf].overflowing_sub(fw as u64);
+                    self.digits[i + shf] = pair.0;
+                } else {
+                    pair = overflow_mut.digits[i + shf - N]
+                        .overflowing_sub(fw as u64);
+                    overflow_mut.digits[i + shf - N] = pair.0;
+                }
+
+                fw >>= 64;
+                if pair.1 {
+                    fw += 1;
+                }
+            }
+            if fw > 0 && order2 + shf < N << 1 {
+                if order2 + shf < N {
+                    self.digits[order2 + shf] -= fw as u64;
+                } else {
+                    overflow_mut.digits[order2 + shf - N] -= fw as u64;
+                }
+            }
+        }
+
         res
     }
 
@@ -504,6 +690,28 @@ mod tests {
         assert_eq!(c, bigi![8; 12312344, 1, 1234098120, 21556, 134236576]);
     }
 
+    #[test]
+    fn test_multiply_overflowing() {
+        let a = bigi![2; 4402752814420623592, 77189580264184];
+        let b = bigi![2; 16242343048349248772, 4571967601559393757];
+        let (c, overflow) = a.multiply_overflowing(&b);
+
+        assert_eq!(c, bigi![2; 18314275272483195808, 4916496906824170722]);
+        assert_eq!(overflow, bigi![2; 14967786748685025341, 19131195116908]);
+    }
+
+    #[test]
+    fn test_divide_overflowing() {
+        let mut c = bigi![2; 18314275272483195888, 4916496906824170722];
+        let overflow = bigi![2; 14967786748685025341, 19131195116908];
+        let b = bigi![2; 16242343048349248772, 4571967601559393757];
+
+        let a = c.divide_overflowing(&b, &overflow);
+
+        assert_eq!(a, bigi![2; 4402752814420623592, 77189580264184]);
+        assert_eq!(c, bigi![2; 80]);
+    }
+
     #[bench]
     fn bench_is_zero(bencher: &mut Bencher) {
         let x = bigi![8; 0];
@@ -572,6 +780,23 @@ mod tests {
     }
 
     #[bench]
+    fn bench_multiply_overflowing_256(bencher: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let x = Bigi::<4>::gen_random(&mut rng, 256, false);
+        let y = Bigi::<4>::gen_random(&mut rng, 256, false);
+        bencher.iter(|| x.multiply_overflowing(&y));
+    }
+
+    #[bench]
+    fn bench_divide_overflowing_256(bencher: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let mut x = Bigi::<4>::gen_random(&mut rng, 256, true);
+        let y = Bigi::<4>::gen_random(&mut rng, 256, true);
+        let overflow = Bigi::<4>::gen_random(&mut rng, 255, true);
+        bencher.iter(|| x.divide_overflowing(&y, &overflow));
+    }
+
+    #[bench]
     fn bench_div_256_256(bencher: &mut Bencher) {
         let mut rng = rand::thread_rng();
         let x = Bigi::<8>::gen_random(&mut rng, 256, false);
@@ -606,9 +831,9 @@ mod tests {
     #[bench]
     fn bench_powmod_256(bencher: &mut Bencher) {
         let mut rng = rand::thread_rng();
-        let p = Bigi::<8>::gen_random(&mut rng, 256, false);
-        let m = Bigi::<8>::gen_random(&mut rng, 256, false);
-        let x = Bigi::<8>::gen_random(&mut rng, 256, false) % &m;
+        let p = Bigi::<4>::gen_random(&mut rng, 256, false);
+        let m = Bigi::<4>::gen_random(&mut rng, 256, false);
+        let x = Bigi::<4>::gen_random(&mut rng, 256, false) % &m;
         bencher.iter(|| x.powmod(&p, &m));
     }
 

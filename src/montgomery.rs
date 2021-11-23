@@ -108,46 +108,46 @@ mod tests {
 
     #[test]
     fn test_to_repr() {
-        let n = bigi![8; 23];
+        let n = bigi![4; 23];
         let mgr = MontgomeryAlg::new(5, &n);
 
-        assert_eq!(mgr.to_repr(&bigi![8; 6]), bigi![8; 8]);
-        assert_eq!(mgr.to_repr(&bigi![8; 1]), bigi![8; 9]);
-        assert_eq!(mgr.to_repr(&bigi![8; 2]), bigi![8; 18]);
-        assert_eq!(mgr.to_repr(&bigi![8; 12]), bigi![8; 16]);
-        assert_eq!(mgr.to_repr(&bigi![8; 0]), bigi![8; 0]);
-        assert_eq!(mgr.to_repr(&bigi![8; 22]), bigi![8; 14]);
+        assert_eq!(mgr.to_repr(&bigi![4; 6]), bigi![4; 8]);
+        assert_eq!(mgr.to_repr(&bigi![4; 1]), bigi![4; 9]);
+        assert_eq!(mgr.to_repr(&bigi![4; 2]), bigi![4; 18]);
+        assert_eq!(mgr.to_repr(&bigi![4; 12]), bigi![4; 16]);
+        assert_eq!(mgr.to_repr(&bigi![4; 0]), bigi![4; 0]);
+        assert_eq!(mgr.to_repr(&bigi![4; 22]), bigi![4; 14]);
     }
 
     #[test]
     fn test_from_repr() {
-        let n = bigi![8; 23];
+        let n = bigi![4; 23];
         let mgr = MontgomeryAlg::new(5, &n);
 
-        assert_eq!(mgr.from_repr(&bigi![8; 8]), bigi![8; 6]);
-        assert_eq!(mgr.from_repr(&bigi![8; 9]), bigi![8; 1]);
-        assert_eq!(mgr.from_repr(&bigi![8; 18]), bigi![8; 2]);
-        assert_eq!(mgr.from_repr(&bigi![8; 16]), bigi![8; 12]);
-        assert_eq!(mgr.from_repr(&bigi![8; 0]), bigi![8; 0]);
-        assert_eq!(mgr.from_repr(&bigi![8; 14]), bigi![8; 22]);
+        assert_eq!(mgr.from_repr(&bigi![4; 8]), bigi![4; 6]);
+        assert_eq!(mgr.from_repr(&bigi![4; 9]), bigi![4; 1]);
+        assert_eq!(mgr.from_repr(&bigi![4; 18]), bigi![4; 2]);
+        assert_eq!(mgr.from_repr(&bigi![4; 16]), bigi![4; 12]);
+        assert_eq!(mgr.from_repr(&bigi![4; 0]), bigi![4; 0]);
+        assert_eq!(mgr.from_repr(&bigi![4; 14]), bigi![4; 22]);
     }
 
     #[test]
     fn test_mul() {
-        let n = bigi![8; 23];
+        let n = bigi![4; 23];
         let mgr = MontgomeryAlg::new(5, &n);
 
-        assert_eq!(mgr.mul(&bigi![8; 8], &bigi![8; 9]), bigi![8; 8]);
-        assert_eq!(mgr.mul(&bigi![8; 8], &bigi![8; 18]), bigi![8; 16]);
-        assert_eq!(mgr.mul(&bigi![8; 9], &bigi![8; 9]), bigi![8; 9]);
+        assert_eq!(mgr.mul(&bigi![4; 8], &bigi![4; 9]), bigi![4; 8]);
+        assert_eq!(mgr.mul(&bigi![4; 8], &bigi![4; 18]), bigi![4; 16]);
+        assert_eq!(mgr.mul(&bigi![4; 9], &bigi![4; 9]), bigi![4; 9]);
     }
 
     #[test]
     fn test_powmod() {
-        let n = bigi![8; 23];
+        let n = bigi![4; 23];
         let mgr = MontgomeryAlg::new(5, &n);
 
-        assert_eq!(mgr.powmod(&bigi![8; 9], &bigi![8; 12]), bigi![8; 9]);
+        assert_eq!(mgr.powmod(&bigi![4; 9], &bigi![4; 12]), bigi![4; 9]);
     }
 
     #[bench]

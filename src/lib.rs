@@ -10,7 +10,6 @@
 //! To achieve high performance static data allocation for the numbers is used,
 //! the number type is implemented as a generic structure with a fixed-size
 //! array of *u64*.
-
 #![feature(test)]
 extern crate test;
 

@@ -22,11 +22,12 @@ impl<const N: usize> Modulo<N> {
 
     /// Modular addition.
     pub fn add(&self, x: &Bigi<N>, y: &Bigi<N>) -> Bigi<N> {
-        let mut r = *x + y;
-        while r >= self.modulo {
-            r -= &self.modulo;
+        let yi = self.modulo - y;
+        if *x < yi {
+            *x + y
+        } else {
+            *x - &yi
         }
-        r
     }
 
     /// Modular subtraction.
@@ -40,7 +41,9 @@ impl<const N: usize> Modulo<N> {
 
     /// Modular multiplication.
     pub fn mul(&self, x: &Bigi<N>, y: &Bigi<N>) -> Bigi<N> {
-        (*x * y) % &self.modulo
+        let mut pair = x.multiply_overflowing(y);
+        pair.0.divide_overflowing(&self.modulo, &pair.1);
+        pair.0
     }
 
     /// Modular division.
@@ -72,96 +75,96 @@ mod tests {
 
     #[test]
     fn test_normalize() {
-        let m = Modulo::new(&bigi![8; 19]);
-        let mut x: Bigi<8>;
+        let m = Modulo::new(&bigi![4; 19]);
+        let mut x: Bigi<4>;
 
-        x = bigi![8; 25];
+        x = bigi![4; 25];
         m.normalize(&mut x);
-        assert_eq!(x, bigi![8; 6]);
+        assert_eq!(x, bigi![4; 6]);
 
-        x = bigi![8; 0];
+        x = bigi![4; 0];
         m.normalize(&mut x);
-        assert_eq!(x, bigi![8; 0]);
+        assert_eq!(x, bigi![4; 0]);
 
-        x = bigi![8; 11];
+        x = bigi![4; 11];
         m.normalize(&mut x);
-        assert_eq!(x, bigi![8; 11]);
+        assert_eq!(x, bigi![4; 11]);
 
-        x = bigi![8; 1];
+        x = bigi![4; 1];
         m.normalize(&mut x);
-        assert_eq!(x, bigi![8; 1]);
+        assert_eq!(x, bigi![4; 1]);
 
-        x = bigi![8; 192];
+        x = bigi![4; 192];
         m.normalize(&mut x);
-        assert_eq!(x, bigi![8; 2]);
+        assert_eq!(x, bigi![4; 2]);
 
-        x = bigi![8; 38];
+        x = bigi![4; 38];
         m.normalize(&mut x);
-        assert_eq!(x, bigi![8; 0]);
+        assert_eq!(x, bigi![4; 0]);
     }
 
     #[test]
     fn test_add() {
-        let m = Modulo::new(&bigi![8; 19]);
-        assert_eq!(m.add(&bigi![8; 3], &bigi![8; 7]), bigi![8; 10]);
-        assert_eq!(m.add(&bigi![8; 13], &bigi![8; 10]), bigi![8; 4]);
-        assert_eq!(m.add(&bigi![8; 13], &bigi![8; 6]), bigi![8; 0]);
-        assert_eq!(m.add(&bigi![8; 13], &bigi![8; 0]), bigi![8; 13]);
-        assert_eq!(m.add(&bigi![8; 0], &bigi![8; 6]), bigi![8; 6]);
-        assert_eq!(m.add(&bigi![8; 0], &bigi![8; 0]), bigi![8; 0]);
+        let m = Modulo::new(&bigi![4; 19]);
+        assert_eq!(m.add(&bigi![4; 3], &bigi![4; 7]), bigi![4; 10]);
+        assert_eq!(m.add(&bigi![4; 13], &bigi![4; 10]), bigi![4; 4]);
+        assert_eq!(m.add(&bigi![4; 13], &bigi![4; 6]), bigi![4; 0]);
+        assert_eq!(m.add(&bigi![4; 13], &bigi![4; 0]), bigi![4; 13]);
+        assert_eq!(m.add(&bigi![4; 0], &bigi![4; 6]), bigi![4; 6]);
+        assert_eq!(m.add(&bigi![4; 0], &bigi![4; 0]), bigi![4; 0]);
     }
 
     #[test]
     fn test_sub() {
-        let m = Modulo::new(&bigi![8; 19]);
-        assert_eq!(m.sub(&bigi![8; 3], &bigi![8; 7]), bigi![8; 15]);
-        assert_eq!(m.sub(&bigi![8; 13], &bigi![8; 10]), bigi![8; 3]);
-        assert_eq!(m.sub(&bigi![8; 13], &bigi![8; 0]), bigi![8; 13]);
-        assert_eq!(m.sub(&bigi![8; 0], &bigi![8; 6]), bigi![8; 13]);
-        assert_eq!(m.sub(&bigi![8; 0], &bigi![8; 0]), bigi![8; 0]);
+        let m = Modulo::new(&bigi![4; 19]);
+        assert_eq!(m.sub(&bigi![4; 3], &bigi![4; 7]), bigi![4; 15]);
+        assert_eq!(m.sub(&bigi![4; 13], &bigi![4; 10]), bigi![4; 3]);
+        assert_eq!(m.sub(&bigi![4; 13], &bigi![4; 0]), bigi![4; 13]);
+        assert_eq!(m.sub(&bigi![4; 0], &bigi![4; 6]), bigi![4; 13]);
+        assert_eq!(m.sub(&bigi![4; 0], &bigi![4; 0]), bigi![4; 0]);
     }
 
     #[test]
     fn test_mul() {
-        let m = Modulo::new(&bigi![8; 19]);
-        assert_eq!(m.mul(&bigi![8; 3], &bigi![8; 4]), bigi![8; 12]);
-        assert_eq!(m.mul(&bigi![8; 13], &bigi![8; 10]), bigi![8; 16]);
-        assert_eq!(m.mul(&bigi![8; 13], &bigi![8; 0]), bigi![8; 0]);
-        assert_eq!(m.mul(&bigi![8; 0], &bigi![8; 6]), bigi![8; 0]);
-        assert_eq!(m.mul(&bigi![8; 0], &bigi![8; 0]), bigi![8; 0]);
+        let m = Modulo::new(&bigi![4; 19]);
+        assert_eq!(m.mul(&bigi![4; 3], &bigi![4; 4]), bigi![4; 12]);
+        assert_eq!(m.mul(&bigi![4; 13], &bigi![4; 10]), bigi![4; 16]);
+        assert_eq!(m.mul(&bigi![4; 13], &bigi![4; 0]), bigi![4; 0]);
+        assert_eq!(m.mul(&bigi![4; 0], &bigi![4; 6]), bigi![4; 0]);
+        assert_eq!(m.mul(&bigi![4; 0], &bigi![4; 0]), bigi![4; 0]);
     }
 
     #[test]
     fn test_div() {
-        let m = Modulo::new(&bigi![8; 19]);
-        assert_eq!(m.div(&bigi![8; 12], &bigi![8; 3]), bigi![8; 4]);
-        assert_eq!(m.div(&bigi![8; 4], &bigi![8; 13]), bigi![8; 12]);
-        assert_eq!(m.div(&bigi![8; 0], &bigi![8; 6]), bigi![8; 0]);
+        let m = Modulo::new(&bigi![4; 19]);
+        assert_eq!(m.div(&bigi![4; 12], &bigi![4; 3]), bigi![4; 4]);
+        assert_eq!(m.div(&bigi![4; 4], &bigi![4; 13]), bigi![4; 12]);
+        assert_eq!(m.div(&bigi![4; 0], &bigi![4; 6]), bigi![4; 0]);
     }
 
     #[test]
     fn test_inv() {
-        let m = Modulo::new(&bigi![8; 19]);
-        assert_eq!(m.inv(&bigi![8; 3]), bigi![8; 13]);
-        assert_eq!(m.inv(&bigi![8; 13]), bigi![8; 3]);
-        assert_eq!(m.inv(&bigi![8; 1]), bigi![8; 1]);
+        let m = Modulo::new(&bigi![4; 19]);
+        assert_eq!(m.inv(&bigi![4; 3]), bigi![4; 13]);
+        assert_eq!(m.inv(&bigi![4; 13]), bigi![4; 3]);
+        assert_eq!(m.inv(&bigi![4; 1]), bigi![4; 1]);
     }
 
     #[test]
     fn test_pow() {
-        let m = Modulo::new(&bigi![8; 19]);
-        assert_eq!(m.pow(&bigi![8; 2], &bigi![8; 4]), bigi![8; 16]);
-        assert_eq!(m.pow(&bigi![8; 3], &bigi![8; 5]), bigi![8; 15]);
-        assert_eq!(m.pow(&bigi![8; 1], &bigi![8; 16]), bigi![8; 1]);
-        assert_eq!(m.pow(&bigi![8; 0], &bigi![8; 6]), bigi![8; 0]);
+        let m = Modulo::new(&bigi![4; 19]);
+        assert_eq!(m.pow(&bigi![4; 2], &bigi![4; 4]), bigi![4; 16]);
+        assert_eq!(m.pow(&bigi![4; 3], &bigi![4; 5]), bigi![4; 15]);
+        assert_eq!(m.pow(&bigi![4; 1], &bigi![4; 16]), bigi![4; 1]);
+        assert_eq!(m.pow(&bigi![4; 0], &bigi![4; 6]), bigi![4; 0]);
     }
 
     #[test]
     fn test_sqrt_mod() {
-        let m = Modulo::new(&bigi![8; 19]);
-        assert_eq!(m.sqrt(&bigi![8; 2]), Err("Non-quadratic residue"));
-        assert_eq!(m.sqrt(&bigi![8; 5]), Ok((bigi![8; 9], bigi![8; 10])));
-        assert_eq!(m.sqrt(&bigi![8; 16]), Ok((bigi![8; 4], bigi![8; 15])));
-        assert_eq!(m.sqrt(&bigi![8; 1]), Ok((bigi![8; 1], bigi![8; 18])));
+        let m = Modulo::new(&bigi![4; 19]);
+        assert_eq!(m.sqrt(&bigi![4; 2]), Err("Non-quadratic residue"));
+        assert_eq!(m.sqrt(&bigi![4; 5]), Ok((bigi![4; 9], bigi![4; 10])));
+        assert_eq!(m.sqrt(&bigi![4; 16]), Ok((bigi![4; 4], bigi![4; 15])));
+        assert_eq!(m.sqrt(&bigi![4; 1]), Ok((bigi![4; 1], bigi![4; 18])));
     }
 }
